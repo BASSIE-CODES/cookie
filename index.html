@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Baisha's Bloom Tree - Persistent</title>
+    <title>Bassie's Bloom Tree - Persistent</title>
     <style>
         :root { 
             --bg: #1e1b29; 
@@ -83,18 +83,18 @@
                 sun: { name: "Soft Glow", icon: "☀️", cost: 150, power: 8, count: 0, req: 'root', x: 70, y: 300 },
                 mist: { name: "Lavender Mist", icon: "🌫️", cost: 500, power: 20, count: 0, req: 'water', x: 20, y: 550 },
                 bloom: { name: "Spring Bloom", icon: "🌻", cost: 800, power: 35, count: 0, req: 'sun', x: 80, y: 550 },
-                spirit: { name: "Baisha's Spirit", icon: "👻", cost: 5000, power: 150, count: 0, req: 'mist', x: 50, y: 800 },
+                spirit: { name: "Bassie's Spirit", icon: "👻", cost: 5000, power: 150, count: 0, req: 'mist', x: 50, y: 800 },
                 bassie: { name: "Bassie", icon: "🧺", cost: 50000, power: 1000, count: 0, req: 'spirit', x: 50, y: 1100 }
             }
         };
 
         // SAVE & LOAD LOGIC
         function save() {
-            localStorage.setItem("BaishaBloomSave", JSON.stringify(game));
+            localStorage.setItem("BassieBloomSave", JSON.stringify(game));
         }
 
         function load() {
-            const saved = localStorage.getItem("BaishaBloomSave");
+            const saved = localStorage.getItem("BassieBloomSave");
             if (saved) {
                 const parsed = JSON.parse(saved);
                 // Merge loaded counts/costs back into the structure
@@ -194,7 +194,7 @@
 
         function resetGame() {
             if(confirm("Erase all petals and start over?")) {
-                localStorage.removeItem("BaishaBloomSave");
+                localStorage.removeItem("BassieBloomSave");
                 location.reload();
             }
         }
