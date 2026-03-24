@@ -1,95 +1,80 @@
+recognize the sender and know the content is safe.
+Report Suspicious
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Skill Tree Clicker</title>
+    <title>Baisha's Bloom - Skill Tree</title>
     <style>
-        :root { --bg: #0f172a; --gold: #f59e0b; --locked: #334155; --unlocked: #1e293b; }
+        :root { 
+            --bg: #1e1b29; 
+            --lavender-haze: rgba(147, 112, 219, 0.7);
+            --bassie-pink: #ffb7c5;
+            --bassie-purple: #9370db;
+            --gold: #f59e0b; 
+            --locked: #2d2a3d; 
+            --unlocked: #483d8b; 
+        }
         body { margin: 0; background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; overflow: hidden; }
         
-        /* Main Screen */
-        #game-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
-        #stats { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; border: 1px solid #444; }
-        .big-count { font-size: 3rem; color: var(--gold); font-weight: bold; }
-        #cookie { font-size: 150px; cursor: pointer; transition: 0.1s; user-select: none; }
+        #game-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: radial-gradient(circle, #2d2a3d 0%, #1e1b29 100%); }
+        #stats { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; border: 2px solid var(--bassie-purple); }
+        .big-count { font-size: 3rem; color: var(--bassie-pink); font-weight: bold; text-shadow: 0 0 10px var(--bassie-purple); }
+        #cookie { font-size: 150px; cursor: pointer; transition: 0.1s; user-select: none; filter: hue-rotate(280deg); }
         #cookie:active { transform: scale(0.9); }
 
         /* Skill Tree Overlay */
         #tree-overlay { 
-            position: fixed; inset: 0; background: radial-gradient(circle, #1e293b 0%, #0f172a 100%); 
-            display: none; z-index: 1000; overflow: auto; padding: 100px;
+            position: fixed; inset: 0; background: #13111c; 
+            display: none; z-index: 1000; overflow: auto; padding: 50px;
         }
-        .tree-wrapper { position: relative; width: 800px; margin: 0 auto; height: 1200px; }
+        .tree-wrapper { position: relative; width: 1000px; margin: 0 auto; height: 2200px; padding-top: 50px; }
         
-        /* SVG Lines */
-        svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; }
-        line { stroke: #475569; stroke-width: 4; stroke-linecap: round; }
-        line.active { stroke: var(--gold); }
+        svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        line { stroke: #333; stroke-width: 5; stroke-linecap: round; }
+        line.active { stroke: var(--bassie-purple); filter: drop-shadow(0 0 5px var(--bassie-pink)); }
 
         /* Nodes */
         .node { 
-            position: absolute; width: 140px; height: 140px; background: var(--locked);
-            border: 4px solid #475569; border-radius: 50%; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; font-size: 0.8rem;
-            cursor: pointer; transition: 0.3s; transform: translateX(-50%);
+            position: absolute; width: 130px; height: 130px; background: var(--locked);
+            border: 4px solid #444; border-radius: 50%; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center; font-size: 0.75rem;
+            cursor: pointer; transition: 0.4s; transform: translateX(-50%); z-index: 2;
         }
-        .node.available { background: var(--unlocked); border-color: #94a3b8; }
-        .node.purchased { background: #065f46; border-color: var(--gold); box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
-        .node:hover:not(.locked) { transform: translateX(-50%) scale(1.1); z-index: 10; }
+        .node.available { background: var(--unlocked); border-color: var(--bassie-purple); }
+        .node.purchased { background: var(--bassie-purple); border-color: var(--bassie-pink); box-shadow: 0 0 25px var(--bassie-purple); }
         
-        .node-icon { font-size: 2rem; margin-bottom: 5px; }
-        .price { color: var(--gold); font-weight: bold; }
+        /* Haze Effect */
+        .node.locked::after {
+            content: ""; position: absolute; inset: -5px; background: var(--lavender-haze);
+            border-radius: 50%; filter: blur(8px); pointer-events: none;
+        }
+        .node.locked .node-content { opacity: 0; }
 
-        .btn-ui { padding: 15px 30px; background: var(--gold); color: black; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
-        .close-btn { position: fixed; top: 20px; right: 20px; background: #ef4444; }
+        .node-icon { font-size: 1.8rem; margin-bottom: 3px; }
+        .price { color: var(--bassie-pink); font-weight: bold; }
+
+        .btn-ui { padding: 15px 40px; background: var(--bassie-purple); color: white; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
+        .btn-ui:hover { background: var(--bassie-pink); color: #000; }
+        .close-btn { position: fixed; top: 20px; right: 20px; background: #6b21a8; z-index: 1001; }
     </style>
 </head>
 <body>
 
     <div id="game-view">
         <div id="stats">
-            <div>Cookies: <span class="big-count" id="count">0</span></div>
-            <div>CPS: <span id="cps">0</span></div>
+            <div>Petals Collected: <span class="big-count" id="count">0</span></div>
+            <div>Per Second: <span id="cps">0</span></div>
         </div>
-        <div id="cookie">🍪</div>
-        <button class="btn-ui" style="margin-top: 50px;" onclick="toggleTree()">OPEN SKILL TREE</button>
+        <div id="cookie">🌸</div>
+        <button class="btn-ui" style="margin-top: 50px;" onclick="toggleTree()">VIEW BLOOM TREE</button>
     </div>
 
     <div id="tree-overlay">
-        <button class="btn-ui close-btn" onclick="toggleTree()">CLOSE TREE</button>
+        <button class="btn-ui close-btn" onclick="toggleTree()">EXIT TREE</button>
         <div class="tree-wrapper">
             <svg id="tree-svg"></svg>
-            
-            <!-- Tier 1 -->
-            <div id="node-cursor" class="node available" style="top: 0; left: 50%;" onclick="buy('cursor')">
-                <span class="node-icon">🖱️</span>
-                <strong>Cursor</strong>
-                <span class="price" id="cost-cursor">15</span>
-                <div id="own-cursor">Owned: 0</div>
-            </div>
-
-            <!-- Tier 2 -->
-            <div id="node-grandma" class="node locked" style="top: 300px; left: 30%;" onclick="buy('grandma')">
-                <span class="node-icon">👵</span>
-                <strong>Grandma</strong>
-                <span class="price" id="cost-grandma">100</span>
-                <div id="own-grandma">Owned: 0</div>
-            </div>
-
-            <div id="node-clicker" class="node locked" style="top: 300px; left: 70%;" onclick="buy('clicker')">
-                <span class="node-icon">⚡</span>
-                <strong>Mega Click</strong>
-                <span class="price" id="cost-clicker">200</span>
-                <div id="own-clicker">Owned: 0</div>
-            </div>
-
-            <!-- Tier 3 -->
-            <div id="node-factory" class="node locked" style="top: 600px; left: 50%;" onclick="buy('factory')">
-                <span class="node-icon">🏭</span>
-                <strong>Factory</strong>
-                <span class="price" id="cost-factory">1000</span>
-                <div id="own-factory">Owned: 0</div>
-            </div>
+            <div id="nodes-container"></div>
         </div>
     </div>
 
@@ -97,12 +82,50 @@
         let game = {
             cookies: 0, cps: 0,
             upgrades: {
-                cursor: { cost: 15, power: 1, count: 0, req: null, x: 50, y: 0 },
-                grandma: { cost: 100, power: 5, count: 0, req: 'cursor', x: 30, y: 300 },
-                clicker: { cost: 200, power: 10, count: 0, req: 'cursor', x: 70, y: 300 },
-                factory: { cost: 1000, power: 50, count: 0, req: 'grandma', x: 50, y: 600 }
+                root: { name: "Root", icon: "🌱", cost: 15, power: 1, count: 0, req: null, x: 50, y: 50 },
+                // Branch Left
+                water: { name: "Dew Drop", icon: "💧", cost: 100, power: 5, count: 0, req: 'root', x: 30, y: 300 },
+                mist: { name: "Mist", icon: "🌫️", cost: 500, power: 15, count: 0, req: 'water', x: 20, y: 550 },
+                rain: { name: "Storm", icon: "⛈️", cost: 2500, power: 50, count: 0, req: 'mist', x: 15, y: 800 },
+                ocean: { name: "Tide", icon: "🌊", cost: 15000, power: 200, count: 0, req: 'rain', x: 20, y: 1100 },
+                // Branch Right
+                sun: { name: "Sunlight", icon: "☀️", cost: 150, power: 8, count: 0, req: 'root', x: 70, y: 300 },
+                bloom: { name: "Flower", icon: "🌻", cost: 800, power: 25, count: 0, req: 'sun', x: 80, y: 550 },
+                garden: { name: "Garden", icon: "🏡", cost: 4000, power: 80, count: 0, req: 'bloom', x: 85, y: 800 },
+                forest: { name: "Forest", icon: "🌳", cost: 25000, power: 500, count: 0, req: 'garden', x: 80, y: 1100 },
+                // Middle Path
+                bee: { name: "Worker Bee", icon: "🐝", cost: 2000, power: 60, count: 0, req: 'mist', x: 40, y: 850 },
+                hive: { name: "The Hive", icon: "🍯", cost: 10000, power: 150, count: 0, req: 'bee', x: 50, y: 1100 },
+                // End Game
+                spirit: { name: "Spirit", icon: "👻", cost: 100000, power: 1000, count: 0, req: 'hive', x: 50, y: 1400 },
+                nebula: { name: "Cosmos", icon: "🌌", cost: 500000, power: 5000, count: 0, req: 'spirit', x: 40, y: 1700 },
+                void: { name: "The Void", icon: "🌑", cost: 2000000, power: 20000, count: 0, req: 'nebula', x: 50, y: 2000 },
+                dandy: { name: "Dandy", icon: "✨", cost: 1000000, power: 12000, count: 0, req: 'spirit', x: 65, y: 1700 },
+                bassie: { name: "Baisha", icon: "🎀", cost: 5000000, power: 100000, count: 0, req: 'dandy', x: 60, y: 2000 }
             }
         };
+
+        function initNodes() {
+            const container = document.getElementById('nodes-container');
+            for (let id in game.upgrades) {
+                const up = game.upgrades[id];
+                const div = document.createElement('div');
+                div.id = `node-${id}`;
+                div.className = 'node';
+                div.style.left = `${up.x}%`;
+                div.style.top = `${up.y}px`;
+                div.onclick = () => buy(id);
+                div.innerHTML = `
+                    <div class="node-content">
+                        <span class="node-icon">${up.icon}</span>
+                        <strong>${up.name}</strong>
+                        <span class="price" id="cost-${id}">${up.cost}</span>
+                        <div id="own-${id}">Owned: 0</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+        }
 
         function toggleTree() {
             const tree = document.getElementById('tree-overlay');
@@ -117,7 +140,7 @@
                 game.cookies -= up.cost;
                 up.count++;
                 game.cps += up.power;
-                up.cost = Math.round(up.cost * 1.3);
+                up.cost = Math.round(up.cost * 1.4);
                 update();
                 drawLines();
             }
@@ -132,9 +155,9 @@
                     const parent = game.upgrades[up.req];
                     const line = document.createElementNS("http://www.w3.org", "line");
                     line.setAttribute("x1", `${parent.x}%`);
-                    line.setAttribute("y1", `${parent.y + 70}px`);
+                    line.setAttribute("y1", `${parent.y + 65}px`);
                     line.setAttribute("x2", `${up.x}%`);
-                    line.setAttribute("y2", `${up.y + 70}px`);
+                    line.setAttribute("y2", `${up.y + 65}px`);
                     if (parent.count > 0) line.classList.add('active');
                     svg.appendChild(line);
                 }
@@ -144,13 +167,11 @@
         function update() {
             document.getElementById('count').innerText = Math.floor(game.cookies);
             document.getElementById('cps').innerText = game.cps;
-            
             for (let id in game.upgrades) {
                 const up = game.upgrades[id];
                 const el = document.getElementById(`node-${id}`);
                 document.getElementById(`cost-${id}`).innerText = up.cost;
                 document.getElementById(`own-${id}`).innerText = "Owned: " + up.count;
-
                 if (up.count > 0) el.className = 'node purchased';
                 else if (!up.req || game.upgrades[up.req].count > 0) el.className = 'node available';
                 else el.className = 'node locked';
@@ -159,8 +180,7 @@
 
         document.getElementById('cookie').onclick = () => { game.cookies++; update(); };
         setInterval(() => { game.cookies += game.cps/10; update(); }, 100);
-        window.addEventListener('resize', drawLines);
-        update();
+        window.onload = () => { initNodes(); update(); };
     </script>
 </body>
 </html>
