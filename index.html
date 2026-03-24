@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Baisha's Bloom - Skill Tree</title>
+    <title>Baisha's Bloom Tree - Persistent</title>
     <style>
         :root { 
             --bg: #1e1b29; 
             --lavender-haze: rgba(147, 112, 219, 0.7);
             --bassie-pink: #ffb7c5;
             --bassie-purple: #9370db;
-            --gold: #f59e0b; 
             --locked: #2d2a3d; 
             --unlocked: #483d8b; 
         }
@@ -18,21 +17,18 @@
         #game-view { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: radial-gradient(circle, #2d2a3d 0%, #1e1b29 100%); }
         #stats { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; border: 2px solid var(--bassie-purple); }
         .big-count { font-size: 3rem; color: var(--bassie-pink); font-weight: bold; text-shadow: 0 0 10px var(--bassie-purple); }
-        #cookie { font-size: 150px; cursor: pointer; transition: 0.1s; user-select: none; filter: hue-rotate(280deg); }
-        #cookie:active { transform: scale(0.9); }
+        
+        /* Growing Flower */
+        #cookie { font-size: 150px; cursor: pointer; transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); user-select: none; filter: hue-rotate(280deg); }
+        #cookie:active { transform: scale(0.8); }
 
-        /* Skill Tree Overlay */
-        #tree-overlay { 
-            position: fixed; inset: 0; background: #13111c; 
-            display: none; z-index: 1000; overflow: auto; padding: 50px;
-        }
-        .tree-wrapper { position: relative; width: 1000px; margin: 0 auto; height: 2200px; padding-top: 50px; }
+        #tree-overlay { position: fixed; inset: 0; background: #13111c; display: none; z-index: 1000; overflow: auto; padding: 50px; }
+        .tree-wrapper { position: relative; width: 1000px; margin: 0 auto; height: 1800px; padding-top: 50px; }
         
         svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
         line { stroke: #333; stroke-width: 5; stroke-linecap: round; }
         line.active { stroke: var(--bassie-purple); filter: drop-shadow(0 0 5px var(--bassie-pink)); }
 
-        /* Nodes */
         .node { 
             position: absolute; width: 130px; height: 130px; background: var(--locked);
             border: 4px solid #444; border-radius: 50%; display: flex; flex-direction: column;
@@ -41,70 +37,88 @@
         }
         .node.available { background: var(--unlocked); border-color: var(--bassie-purple); }
         .node.purchased { background: var(--bassie-purple); border-color: var(--bassie-pink); box-shadow: 0 0 25px var(--bassie-purple); }
+        .node.locked::after { content: ""; position: absolute; inset: -5px; background: var(--lavender-haze); border-radius: 50%; filter: blur(8px); pointer-events: none; }
         
-        /* Haze Effect */
-        .node.locked::after {
-            content: ""; position: absolute; inset: -5px; background: var(--lavender-haze);
-            border-radius: 50%; filter: blur(8px); pointer-events: none;
-        }
-        .node.locked .node-content { opacity: 0; }
-
-        .node-icon { font-size: 1.8rem; margin-bottom: 3px; }
-        .price { color: var(--bassie-pink); font-weight: bold; }
-
-        .btn-ui { padding: 15px 40px; background: var(--bassie-purple); color: white; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
-        .btn-ui:hover { background: var(--bassie-pink); color: #000; }
-        .close-btn { position: fixed; top: 20px; right: 20px; background: #6b21a8; z-index: 1001; }
+        .btn-ui { padding: 15px 40px; background: var(--bassie-purple); color: white; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 1.2rem; }
+        .save-msg { position: fixed; bottom: 20px; right: 20px; font-size: 0.8rem; color: #666; }
     </style>
 </head>
-<body>
+<body onclick="startMusic()">
 
     <div id="game-view">
         <div id="stats">
-            <div>Petals Collected: <span class="big-count" id="count">0</span></div>
-            <div>Per Second: <span id="cps">0</span></div>
+            <div>Petals: <span class="big-count" id="count">0</span></div>
+            <div>CPS: <span id="cps">0</span></div>
         </div>
         <div id="cookie">🌸</div>
-        <button class="btn-ui" style="margin-top: 50px;" onclick="toggleTree()">VIEW BLOOM TREE</button>
+        <button class="btn-ui" style="margin-top: 50px;" onclick="toggleTree()">BLOOM TREE</button>
+        <button onclick="resetGame()" style="margin-top: 10px; background:none; border:none; color:#444; cursor:pointer;">Reset Save</button>
     </div>
 
     <div id="tree-overlay">
-        <button class="btn-ui close-btn" onclick="toggleTree()">EXIT TREE</button>
+        <button class="btn-ui" style="position:fixed; top:20px; right:20px; z-index:1001; background:#6b21a8;" onclick="toggleTree()">EXIT</button>
         <div class="tree-wrapper">
             <svg id="tree-svg"></svg>
             <div id="nodes-container"></div>
         </div>
     </div>
 
+    <div class="save-msg">Progress saves automatically ✨</div>
+
+    <audio id="bg-music" loop>
+        <source src="https://www.bensound.com" type="audio/mpeg">
+    </audio>
+
     <script>
+        let musicStarted = false;
+        const buySfx = new Audio('https://www.zapsplat.com');
+        const clickSfx = new Audio('https://www.zapsplat.com');
+
         let game = {
-            cookies: 0, cps: 0,
+            cookies: 0,
+            cps: 0,
             upgrades: {
-                root: { name: "Root", icon: "🌱", cost: 15, power: 1, count: 0, req: null, x: 50, y: 50 },
-                // Branch Left
+                root: { name: "Bassie's Seed", icon: "🌱", cost: 15, power: 1, count: 0, req: null, x: 50, y: 50 },
                 water: { name: "Dew Drop", icon: "💧", cost: 100, power: 5, count: 0, req: 'root', x: 30, y: 300 },
-                mist: { name: "Mist", icon: "🌫️", cost: 500, power: 15, count: 0, req: 'water', x: 20, y: 550 },
-                rain: { name: "Storm", icon: "⛈️", cost: 2500, power: 50, count: 0, req: 'mist', x: 15, y: 800 },
-                ocean: { name: "Tide", icon: "🌊", cost: 15000, power: 200, count: 0, req: 'rain', x: 20, y: 1100 },
-                // Branch Right
-                sun: { name: "Sunlight", icon: "☀️", cost: 150, power: 8, count: 0, req: 'root', x: 70, y: 300 },
-                bloom: { name: "Flower", icon: "🌻", cost: 800, power: 25, count: 0, req: 'sun', x: 80, y: 550 },
-                garden: { name: "Garden", icon: "🏡", cost: 4000, power: 80, count: 0, req: 'bloom', x: 85, y: 800 },
-                forest: { name: "Forest", icon: "🌳", cost: 25000, power: 500, count: 0, req: 'garden', x: 80, y: 1100 },
-                // Middle Path
-                bee: { name: "Worker Bee", icon: "🐝", cost: 2000, power: 60, count: 0, req: 'mist', x: 40, y: 850 },
-                hive: { name: "The Hive", icon: "🍯", cost: 10000, power: 150, count: 0, req: 'bee', x: 50, y: 1100 },
-                // End Game
-                spirit: { name: "Spirit", icon: "👻", cost: 100000, power: 1000, count: 0, req: 'hive', x: 50, y: 1400 },
-                nebula: { name: "Cosmos", icon: "🌌", cost: 500000, power: 5000, count: 0, req: 'spirit', x: 40, y: 1700 },
-                void: { name: "The Void", icon: "🌑", cost: 2000000, power: 20000, count: 0, req: 'nebula', x: 50, y: 2000 },
-                dandy: { name: "Dandy", icon: "✨", cost: 1000000, power: 12000, count: 0, req: 'spirit', x: 65, y: 1700 },
-                bassie: { name: "Baisha", icon: "🎀", cost: 5000000, power: 100000, count: 0, req: 'dandy', x: 60, y: 2000 }
+                sun: { name: "Soft Glow", icon: "☀️", cost: 150, power: 8, count: 0, req: 'root', x: 70, y: 300 },
+                mist: { name: "Lavender Mist", icon: "🌫️", cost: 500, power: 20, count: 0, req: 'water', x: 20, y: 550 },
+                bloom: { name: "Spring Bloom", icon: "🌻", cost: 800, power: 35, count: 0, req: 'sun', x: 80, y: 550 },
+                spirit: { name: "Baisha's Spirit", icon: "👻", cost: 5000, power: 150, count: 0, req: 'mist', x: 50, y: 800 },
+                bassie: { name: "Bassie", icon: "🧺", cost: 50000, power: 1000, count: 0, req: 'spirit', x: 50, y: 1100 }
             }
         };
 
+        // SAVE & LOAD LOGIC
+        function save() {
+            localStorage.setItem("BaishaBloomSave", JSON.stringify(game));
+        }
+
+        function load() {
+            const saved = localStorage.getItem("BaishaBloomSave");
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Merge loaded counts/costs back into the structure
+                game.cookies = parsed.cookies;
+                game.cps = parsed.cps;
+                for (let id in parsed.upgrades) {
+                    if (game.upgrades[id]) {
+                        game.upgrades[id].count = parsed.upgrades[id].count;
+                        game.upgrades[id].cost = parsed.upgrades[id].cost;
+                    }
+                }
+            }
+        }
+
+        function startMusic() {
+            if (!musicStarted) {
+                document.getElementById('bg-music').play().catch(()=>{});
+                musicStarted = true;
+            }
+        }
+
         function initNodes() {
             const container = document.getElementById('nodes-container');
+            container.innerHTML = "";
             for (let id in game.upgrades) {
                 const up = game.upgrades[id];
                 const div = document.createElement('div');
@@ -112,23 +126,10 @@
                 div.className = 'node';
                 div.style.left = `${up.x}%`;
                 div.style.top = `${up.y}px`;
-                div.onclick = () => buy(id);
-                div.innerHTML = `
-                    <div class="node-content">
-                        <span class="node-icon">${up.icon}</span>
-                        <strong>${up.name}</strong>
-                        <span class="price" id="cost-${id}">${up.cost}</span>
-                        <div id="own-${id}">Owned: 0</div>
-                    </div>
-                `;
+                div.onclick = (e) => { e.stopPropagation(); buy(id); };
+                div.innerHTML = `<div class="node-content"><span>${up.icon}</span><br><strong>${up.name}</strong><br><span id="cost-text-${id}" style="color:#ffb7c5">${up.cost}</span></div>`;
                 container.appendChild(div);
             }
-        }
-
-        function toggleTree() {
-            const tree = document.getElementById('tree-overlay');
-            tree.style.display = tree.style.display === 'block' ? 'none' : 'block';
-            if(tree.style.display === 'block') drawLines();
         }
 
         function buy(id) {
@@ -139,8 +140,10 @@
                 up.count++;
                 game.cps += up.power;
                 up.cost = Math.round(up.cost * 1.4);
+                buySfx.play();
                 update();
                 drawLines();
+                save();
             }
         }
 
@@ -152,10 +155,8 @@
                 if (up.req) {
                     const parent = game.upgrades[up.req];
                     const line = document.createElementNS("http://www.w3.org", "line");
-                    line.setAttribute("x1", `${parent.x}%`);
-                    line.setAttribute("y1", `${parent.y + 65}px`);
-                    line.setAttribute("x2", `${up.x}%`);
-                    line.setAttribute("y2", `${up.y + 65}px`);
+                    line.setAttribute("x1", `${parent.x}%`); line.setAttribute("y1", `${parent.y + 65}px`);
+                    line.setAttribute("x2", `${up.x}%`); line.setAttribute("y2", `${up.y + 65}px`);
                     if (parent.count > 0) line.classList.add('active');
                     svg.appendChild(line);
                 }
@@ -164,21 +165,61 @@
 
         function update() {
             document.getElementById('count').innerText = Math.floor(game.cookies);
-            document.getElementById('cps').innerText = game.cps;
+            document.getElementById('cps').innerText = game.cps.toFixed(1);
+            
+            // Evolve the flower based on CPS
+            const size = 150 + (Math.min(game.cps / 10, 100));
+            const glow = Math.min(game.cps / 5, 40);
+            const cookie = document.getElementById('cookie');
+            cookie.style.fontSize = size + "px";
+            cookie.style.filter = `hue-rotate(280deg) drop-shadow(0 0 ${glow}px var(--bassie-pink))`;
+
             for (let id in game.upgrades) {
                 const up = game.upgrades[id];
                 const el = document.getElementById(`node-${id}`);
-                document.getElementById(`cost-${id}`).innerText = up.cost;
-                document.getElementById(`own-${id}`).innerText = "Owned: " + up.count;
+                const costTxt = document.getElementById(`cost-text-${id}`);
+                if(costTxt) costTxt.innerText = up.cost;
+
                 if (up.count > 0) el.className = 'node purchased';
                 else if (!up.req || game.upgrades[up.req].count > 0) el.className = 'node available';
                 else el.className = 'node locked';
             }
         }
 
-        document.getElementById('cookie').onclick = () => { game.cookies++; update(); };
-        setInterval(() => { game.cookies += game.cps/10; update(); }, 100);
-        window.onload = () => { initNodes(); update(); };
+        function toggleTree() {
+            const tree = document.getElementById('tree-overlay');
+            tree.style.display = tree.style.display === 'block' ? 'none' : 'block';
+            if(tree.style.display === 'block') drawLines();
+        }
+
+        function resetGame() {
+            if(confirm("Erase all petals and start over?")) {
+                localStorage.removeItem("BaishaBloomSave");
+                location.reload();
+            }
+        }
+
+        document.getElementById('cookie').onclick = (e) => { 
+            e.stopPropagation(); 
+            game.cookies++; 
+            clickSfx.currentTime = 0;
+            clickSfx.play(); 
+            update(); 
+            if(game.cookies % 10 === 0) save(); // Autosave every 10 clicks
+        };
+
+        setInterval(() => { 
+            game.cookies += game.cps/10; 
+            update(); 
+        }, 100);
+
+        setInterval(save, 10000); // Autosave every 10 seconds
+
+        window.onload = () => { 
+            load();
+            initNodes(); 
+            update(); 
+        };
     </script>
 </body>
 </html>
