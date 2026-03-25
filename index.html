@@ -2,185 +2,171 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bassie's Bloom Skill Tree</title>
+    <title>Bassie's Wide Bloom Tree</title>
     <style>
         :root { 
-            --bg: #1e1b29; 
-            --lavender-haze: rgba(147, 112, 219, 0.85); /* Semi-dark Lavender Haze */
-            --bassie-pink: #ffb7c5; /* Tulip Pink */
-            --bassie-periwinkle: #b0c2ff; /* Periwinkle Dress */
-            --bassie-green: #90ee90; /* Petal Green */
-            --bassie-dark-purple: #483d8b; 
+            --bg: #13111c; 
+            --haze: rgba(147, 112, 219, 0.9); 
+            --pink: #ffb7c5; 
+            --periwinkle: #b0c2ff; 
+            --purple: #483d8b; 
         }
-        body { margin: 0; background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; }
+        body { margin: 0; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; }
         
-        #game-sidebar { width: 300px; background: rgba(0,0,0,0.4); border-right: 2px solid var(--bassie-periwinkle); padding: 20px; display: flex; flex-direction: column; gap: 20px; z-index: 10; }
-        .stat-box { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; border: 1px solid var(--bassie-pink); }
-        .big-text { font-size: 2.5rem; color: var(--bassie-pink); font-weight: bold; }
+        /* Stats Panel */
+        #ui { width: 280px; background: #1e1b29; border-right: 3px solid var(--periwinkle); padding: 25px; z-index: 100; box-shadow: 10px 0 20px rgba(0,0,0,0.5); }
+        .stat-val { font-size: 2.2rem; color: var(--pink); font-weight: bold; margin-bottom: 20px; }
 
-        /* Tree Viewport */
-        #tree-container { flex: 1; position: relative; overflow: auto; background: radial-gradient(circle, #2d2a3d 0%, #1e1b29 100%); cursor: grab; }
-        #tree-wrapper { position: relative; width: 3000px; height: 4000px; }
+        /* Tree Canvas */
+        #viewport { flex: 1; overflow: auto; background: radial-gradient(circle, #2d2a3d 0%, #13111c 100%); cursor: grab; }
+        #canvas { position: relative; width: 6000px; height: 8000px; }
         
-        svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-        line { stroke: #333; stroke-width: 6; stroke-linecap: round; }
-        line.active { stroke: var(--bassie-periwinkle); filter: drop-shadow(0 0 5px var(--bassie-pink)); }
+        svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        line { stroke: #2d2a3d; stroke-width: 8; stroke-linecap: round; transition: 0.5s; }
+        line.active { stroke: var(--periwinkle); filter: drop-shadow(0 0 8px var(--pink)); }
 
-        /* Skill Nodes */
+        /* Circular Nodes */
         .node { 
-            position: absolute; width: 80px; height: 80px; background: #2d2a3d;
-            border: 4px solid #444; border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; text-align: center; cursor: pointer; transition: 0.3s;
-            transform: translate(-50%, -50%); z-index: 5;
+            position: absolute; width: 90px; height: 90px; background: #222;
+            border: 5px solid #333; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; cursor: pointer; transition: 0.4s;
+            transform: translate(-50%, -50%); z-index: 10;
         }
-        .node.available { background: var(--bassie-dark-purple); border-color: var(--bassie-periwinkle); }
-        .node.purchased { background: var(--bassie-pink); border-color: white; box-shadow: 0 0 20px var(--bassie-pink); color: black; }
+        .node.buyable { background: var(--purple); border-color: var(--periwinkle); }
+        .node.owned { background: var(--pink); border-color: white; box-shadow: 0 0 25px var(--pink); color: black; }
         
-        /* The Lavender Haze */
-        .node.locked::after {
-            content: ""; position: absolute; inset: -15px; background: var(--lavender-haze);
-            border-radius: 50%; filter: blur(12px); pointer-events: none; opacity: 1; transition: opacity 0.5s;
+        /* Haze System */
+        .node.hidden { pointer-events: none; }
+        .node.hidden::after {
+            content: ""; position: absolute; inset: -40px; background: var(--haze);
+            border-radius: 50%; filter: blur(25px); z-index: 15;
         }
-        .node.locked .node-text { opacity: 0; }
-        .node:hover:not(.locked) { transform: translate(-50%, -50%) scale(1.15); z-index: 20; }
-
-        .btn-ui { padding: 15px; background: var(--bassie-periwinkle); color: black; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .node.hidden .label { opacity: 0; }
+        
+        .btn { width: 100%; padding: 15px; background: var(--periwinkle); border: none; border-radius: 50px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-    <div id="game-sidebar">
-        <div class="stat-box">
-            <div>Petals</div>
-            <div id="currency" class="big-text">0</div>
-        </div>
-        <div class="stat-box">
-            <div>Growth Rate</div>
-            <div id="cps" style="color: var(--bassie-green)">0.0/s</div>
-        </div>
-        <button class="btn-ui" onclick="manualClick()">GATHER PETALS</button>
-        <p style="font-size: 0.8rem; color: #888;">Scroll or drag to explore the tree! Over 100 skills to find.</p>
+    <div id="ui">
+        <div style="color:var(--periwinkle)">Petals</div>
+        <div id="score" class="stat-val">0</div>
+        <div style="color:var(--periwinkle)">Petals/sec</div>
+        <div id="cps" class="stat-val" style="font-size: 1.5rem;">0.0</div>
+        <button class="btn" onclick="clickPetal()">GATHER PETALS</button>
+        <p style="font-size:0.8rem; color:#666; margin-top:30px;">Drag to explore the 100+ branches!</p>
     </div>
 
-    <div id="tree-container">
-        <div id="tree-wrapper">
-            <svg id="tree-svg"></svg>
-            <div id="nodes-layer"></div>
+    <div id="viewport">
+        <div id="canvas">
+            <svg id="svg-lines"></svg>
+            <div id="node-layer"></div>
         </div>
     </div>
 
     <script>
-        let game = { petals: 0, cps: 0, purchased: ['root'] };
-        const treeData = {};
-        const nodeCount = 120;
+        let state = { petals: 0, cps: 0, owned: ['root'] };
+        const tree = {};
+        const totalNodes = 110;
 
-        function generateTree() {
-            // Root node
-            treeData['root'] = { id: 'root', x: 1500, y: 100, cost: 0, power: 0, children: [], parent: null };
-            
-            let nodes = ['root'];
-            let currentId = 1;
+        function buildTree() {
+            tree['root'] = { x: 3000, y: 150, cost: 0, power: 0, children: [], parent: null };
+            let queue = ['root'];
+            let count = 1;
 
-            // Generate 120 branching nodes
-            while (currentId <= nodeCount) {
-                let parentId = nodes[Math.floor(Math.random() * nodes.length)];
-                let parent = treeData[parentId];
+            while (count <= totalNodes) {
+                let pId = queue.shift();
+                let pNode = tree[pId];
                 
-                // Limit branches per node
-                if (parent.children.length >= 3) continue;
-
-                let id = 'skill-' + currentId;
-                let angle = (Math.random() * Math.PI) + (parentId === 'root' ? 0 : -0.5);
-                let dist = 200 + Math.random() * 100;
-                
-                treeData[id] = {
-                    id: id,
-                    x: parent.x + Math.cos(angle) * dist * (Math.random() > 0.5 ? 1 : -1),
-                    y: parent.y + 250 + Math.random() * 100,
-                    cost: Math.floor(Math.pow(currentId, 1.8) * 15),
-                    power: Math.pow(currentId, 1.2) * 0.5,
-                    children: [],
-                    parent: parentId
-                };
-                
-                parent.children.push(id);
-                nodes.push(id);
-                currentId++;
+                // Force exactly 2-3 branches for wide growth
+                let branches = 3;
+                for (let b = 0; b < branches; b++) {
+                    if (count > totalNodes) break;
+                    let id = 's' + count;
+                    let offsetX = (b - 1) * 500; // Wide 500px spacing
+                    let offsetY = 400 + (Math.random() * 100); // Tall 400px spacing
+                    
+                    tree[id] = {
+                        id: id,
+                        x: pNode.x + offsetX,
+                        y: pNode.y + offsetY,
+                        cost: Math.floor(Math.pow(count, 1.9) * 20),
+                        power: count * 1.5,
+                        parent: pId,
+                        children: []
+                    };
+                    pNode.children.push(id);
+                    queue.push(id);
+                    count++;
+                }
             }
-            renderTree();
+            render();
         }
 
-        function renderTree() {
-            const layer = document.getElementById('nodes-layer');
-            const svg = document.getElementById('tree-svg');
-            layer.innerHTML = ""; svg.innerHTML = "";
+        function render() {
+            const nodesDiv = document.getElementById('node-layer');
+            const svg = document.getElementById('svg-lines');
+            nodesDiv.innerHTML = ""; svg.innerHTML = "";
 
-            for (let id in treeData) {
-                const node = treeData[id];
-                
-                // Draw Line to Parent
-                if (node.parent) {
-                    const parent = treeData[node.parent];
+            for (let id in tree) {
+                const n = tree[id];
+                if (n.parent) {
+                    const p = tree[n.parent];
                     const line = document.createElementNS("http://www.w3.org", "line");
-                    line.setAttribute("x1", parent.x); line.setAttribute("y1", parent.y);
-                    line.setAttribute("x2", node.x); line.setAttribute("y2", node.y);
-                    line.id = `line-${id}`;
-                    if (game.purchased.includes(node.parent)) line.classList.add('active');
+                    line.setAttribute("x1", p.x); line.setAttribute("y1", p.y);
+                    line.setAttribute("x2", n.x); line.setAttribute("y2", n.y);
+                    line.id = "l-" + id;
                     svg.appendChild(line);
                 }
 
-                // Draw Circle Node
                 const div = document.createElement('div');
-                div.id = `node-${id}`;
-                div.className = 'node locked';
-                div.style.left = node.x + 'px';
-                div.style.top = node.y + 'px';
-                div.onclick = () => buySkill(id);
-                div.innerHTML = `<div class="node-text"><strong>${node.cost}</strong></div>`;
-                layer.appendChild(div);
+                div.id = "n-" + id;
+                div.className = "node hidden";
+                div.style.left = n.x + "px"; div.style.top = n.y + "px";
+                div.onclick = () => buy(id);
+                div.innerHTML = `<div class="label"><b>${n.cost}</b></div>`;
+                nodesDiv.appendChild(div);
             }
-            updateUI();
+            update();
         }
 
-        function buySkill(id) {
-            const node = treeData[id];
-            const isAvailable = game.purchased.includes(node.parent);
-            if (!isAvailable || game.purchased.includes(id)) return;
-
-            if (game.petals >= node.cost) {
-                game.petals -= node.cost;
-                game.purchased.push(id);
-                game.cps += node.power;
-                updateUI();
+        function buy(id) {
+            const n = tree[id];
+            if (state.owned.includes(n.parent) && !state.owned.includes(id) && state.petals >= n.cost) {
+                state.petals -= n.cost;
+                state.owned.push(id);
+                state.cps += n.power;
+                update();
             }
         }
 
-        function manualClick() {
-            game.petals += 1 + (game.cps * 0.1);
-            updateUI();
-        }
+        function update() {
+            document.getElementById('score').innerText = Math.floor(state.petals);
+            document.getElementById('cps').innerText = state.cps.toFixed(1);
 
-        function updateUI() {
-            document.getElementById('currency').innerText = Math.floor(game.petals);
-            document.getElementById('cps').innerText = game.cps.toFixed(1) + "/s";
+            for (let id in tree) {
+                const nodeEl = document.getElementById("n-" + id);
+                const lineEl = document.getElementById("l-" + id);
+                const isOwned = state.owned.includes(id);
+                const isParentOwned = state.owned.includes(tree[id].parent);
 
-            for (let id in treeData) {
-                const el = document.getElementById(`node-${id}`);
-                const line = document.getElementById(`line-${id}`);
-                
-                if (game.purchased.includes(id)) {
-                    el.className = 'node purchased';
-                } else if (game.purchased.includes(treeData[id].parent)) {
-                    el.className = 'node available';
-                    if(line) line.classList.add('active');
+                if (isOwned) {
+                    nodeEl.className = "node owned";
+                    if (lineEl) lineEl.classList.add('active');
+                } else if (isParentOwned) {
+                    nodeEl.className = "node buyable";
+                    if (lineEl) lineEl.style.stroke = "#483d8b";
                 } else {
-                    el.className = 'node locked';
+                    nodeEl.className = "node hidden";
                 }
             }
         }
 
-        setInterval(() => { game.petals += game.cps / 10; updateUI(); }, 100);
-        generateTree();
+        function clickPetal() { state.petals += 1 + (state.cps * 0.1); update(); }
+        setInterval(() => { state.petals += state.cps/10; update(); }, 100);
+        
+        buildTree();
     </script>
 </body>
 </html>
