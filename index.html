@@ -2,99 +2,107 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bassie's Wide Bloom Tree</title>
+    <title>Bassie's Cloud Bloom Tree</title>
     <style>
         :root { 
-            --bg: #13111c; 
-            --haze: rgba(147, 112, 219, 0.9); 
-            --pink: #ffb7c5; 
-            --periwinkle: #b0c2ff; 
-            --purple: #483d8b; 
+            --bg: #1e1b29; 
+            --lavender-cloud: #9370db; /* Lavender */
+            --bassie-pink: #ffb7c5; /* Tulip Skirt */
+            --bassie-periwinkle: #b0c2ff; /* Torso */
+            --bassie-purple: #483d8b; /* Deep shadow */
         }
-        body { margin: 0; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; }
+        body { margin: 0; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Stats Panel */
-        #ui { width: 280px; background: #1e1b29; border-right: 3px solid var(--periwinkle); padding: 25px; z-index: 100; box-shadow: 10px 0 20px rgba(0,0,0,0.5); }
-        .stat-val { font-size: 2.2rem; color: var(--pink); font-weight: bold; margin-bottom: 20px; }
+        /* Main View */
+        #click-section { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        #stats { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; border: 2px solid var(--bassie-periwinkle); }
+        .stat-val { font-size: 2rem; color: var(--bassie-pink); font-weight: bold; }
+        #main-petal { font-size: 150px; cursor: pointer; transition: 0.1s; user-select: none; }
+        #main-petal:active { transform: scale(0.85); }
 
-        /* Tree Canvas */
-        #viewport { flex: 1; overflow: auto; background: radial-gradient(circle, #2d2a3d 0%, #13111c 100%); cursor: grab; }
-        #canvas { position: relative; width: 6000px; height: 8000px; }
+        /* Skill Tree Overlay */
+        #tree-toggle { position: absolute; bottom: 30px; padding: 15px 40px; background: var(--bassie-purple); color: white; border: 3px solid var(--bassie-periwinkle); border-radius: 50px; font-weight: bold; cursor: pointer; }
+        #tree-overlay { position: fixed; inset: 0; background: #13111c; display: none; z-index: 1000; overflow: hidden; }
+        #tree-container { width: 100%; height: 100%; overflow: auto; cursor: grab; }
+        #tree-wrapper { position: relative; width: 6000px; height: 6000px; }
+
+        /* Node Styling */
+        svg { position: absolute; inset: 0; pointer-events: none; }
+        line { stroke: #333; stroke-width: 4; }
+        line.active { stroke: var(--bassie-periwinkle); }
         
-        svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-        line { stroke: #2d2a3d; stroke-width: 8; stroke-linecap: round; transition: 0.5s; }
-        line.active { stroke: var(--periwinkle); filter: drop-shadow(0 0 8px var(--pink)); }
-
-        /* Circular Nodes */
         .node { 
-            position: absolute; width: 90px; height: 90px; background: #222;
-            border: 5px solid #333; border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; cursor: pointer; transition: 0.4s;
-            transform: translate(-50%, -50%); z-index: 10;
+            position: absolute; width: 60px; height: 60px; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transform: translate(-50%, -50%); transition: 0.3s; z-index: 10;
         }
-        .node.buyable { background: var(--purple); border-color: var(--periwinkle); }
-        .node.owned { background: var(--pink); border-color: white; box-shadow: 0 0 25px var(--pink); color: black; }
-        
-        /* Haze System */
-        .node.hidden { pointer-events: none; }
-        .node.hidden::after {
-            content: ""; position: absolute; inset: -40px; background: var(--haze);
-            border-radius: 50%; filter: blur(25px); z-index: 15;
+        .node.available { background: var(--bassie-purple); border: 3px solid var(--bassie-periwinkle); }
+        .node.owned { background: var(--bassie-pink); border: 3px solid white; color: black; box-shadow: 0 0 15px var(--bassie-pink); }
+
+        /* Lavender Cloud Haze */
+        .cloud-cover {
+            position: absolute; width: 120px; height: 80px; background: var(--lavender-cloud);
+            border-radius: 50px; filter: blur(15px); opacity: 0.9;
+            transform: translate(-50%, -50%); z-index: 20; pointer-events: none;
+            transition: transform 1s ease-in, opacity 0.8s ease-out;
         }
-        .node.hidden .label { opacity: 0; }
-        
-        .btn { width: 100%; padding: 15px; background: var(--periwinkle); border: none; border-radius: 50px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn:active { transform: scale(0.95); }
+        /* Blowing away animation */
+        .cloud-cover.blow-away {
+            transform: translate(300px, -200px) scale(1.5);
+            opacity: 0;
+        }
+
+        .close-btn { position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; z-index: 1001; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div style="color:var(--periwinkle)">Petals</div>
-        <div id="score" class="stat-val">0</div>
-        <div style="color:var(--periwinkle)">Petals/sec</div>
-        <div id="cps" class="stat-val" style="font-size: 1.5rem;">0.0</div>
-        <button class="btn" onclick="clickPetal()">GATHER PETALS</button>
-        <p style="font-size:0.8rem; color:#666; margin-top:30px;">Drag to explore the 100+ branches!</p>
+    <div id="click-section">
+        <div id="stats">
+            <div>Petals: <span class="stat-val" id="score">0</span></div>
+            <div>Per Sec: <span id="cps">0</span></div>
+        </div>
+        <div id="main-petal" onclick="clickPetal()">🌸</div>
+        <button id="tree-toggle" onclick="toggleTree()">OPEN BLOOM TREE</button>
     </div>
 
-    <div id="viewport">
-        <div id="canvas">
-            <svg id="svg-lines"></svg>
-            <div id="node-layer"></div>
+    <div id="tree-overlay">
+        <button class="close-btn" onclick="toggleTree()">CLOSE [X]</button>
+        <div id="tree-container">
+            <div id="tree-wrapper">
+                <svg id="tree-svg" width="6000" height="6000"></svg>
+                <div id="cloud-layer"></div>
+                <div id="node-layer"></div>
+            </div>
         </div>
     </div>
 
     <script>
         let state = { petals: 0, cps: 0, owned: ['root'] };
         const tree = {};
-        const totalNodes = 110;
+        const maxNodes = 120;
 
         function buildTree() {
-            tree['root'] = { x: 3000, y: 150, cost: 0, power: 0, children: [], parent: null };
+            tree['root'] = { x: 3000, y: 3000, cost: 0, power: 0, children: [], parent: null };
             let queue = ['root'];
             let count = 1;
 
-            while (count <= totalNodes) {
+            while (count < maxNodes && queue.length > 0) {
                 let pId = queue.shift();
                 let pNode = tree[pId];
-                
-                // Force exactly 2-3 branches for wide growth
-                let branches = 3;
-                for (let b = 0; b < branches; b++) {
-                    if (count > totalNodes) break;
+                let branches = 3; 
+
+                for (let i = 0; i < branches; i++) {
+                    if (count >= maxNodes) break;
                     let id = 's' + count;
-                    let offsetX = (b - 1) * 500; // Wide 500px spacing
-                    let offsetY = 400 + (Math.random() * 100); // Tall 400px spacing
+                    let angle = (pNode.angle || 0) + (i - 1) * 0.9;
+                    if(pId === 'root') angle = (i * (Math.PI * 2 / branches));
                     
+                    let dist = 350;
                     tree[id] = {
-                        id: id,
-                        x: pNode.x + offsetX,
-                        y: pNode.y + offsetY,
-                        cost: Math.floor(Math.pow(count, 1.9) * 20),
-                        power: count * 1.5,
-                        parent: pId,
-                        children: []
+                        id: id, x: pNode.x + Math.cos(angle) * dist, y: pNode.y + Math.sin(angle) * dist,
+                        angle: angle, cost: Math.floor(Math.pow(count, 1.8) * 15),
+                        power: count * 0.5, parent: pId, children: []
                     };
                     pNode.children.push(id);
                     queue.push(id);
@@ -105,28 +113,39 @@
         }
 
         function render() {
-            const nodesDiv = document.getElementById('node-layer');
-            const svg = document.getElementById('svg-lines');
-            nodesDiv.innerHTML = ""; svg.innerHTML = "";
-
+            const nodeLayer = document.getElementById('node-layer');
+            const cloudLayer = document.getElementById('cloud-layer');
+            const svg = document.getElementById('tree-svg');
+            
             for (let id in tree) {
                 const n = tree[id];
                 if (n.parent) {
-                    const p = tree[n.parent];
                     const line = document.createElementNS("http://www.w3.org", "line");
+                    const p = tree[n.parent];
                     line.setAttribute("x1", p.x); line.setAttribute("y1", p.y);
                     line.setAttribute("x2", n.x); line.setAttribute("y2", n.y);
                     line.id = "l-" + id;
                     svg.appendChild(line);
                 }
 
+                // Add Cloud
+                if (id !== 'root') {
+                    const cloud = document.createElement('div');
+                    cloud.id = "c-" + id;
+                    cloud.className = "cloud-cover";
+                    cloud.style.left = n.x + "px";
+                    cloud.style.top = n.y + "px";
+                    cloudLayer.appendChild(cloud);
+                }
+
+                // Add Node
                 const div = document.createElement('div');
                 div.id = "n-" + id;
-                div.className = "node hidden";
+                div.className = "node";
                 div.style.left = n.x + "px"; div.style.top = n.y + "px";
                 div.onclick = () => buy(id);
-                div.innerHTML = `<div class="label"><b>${n.cost}</b></div>`;
-                nodesDiv.appendChild(div);
+                div.innerHTML = `<b>${n.cost}</b>`;
+                nodeLayer.appendChild(div);
             }
             update();
         }
@@ -144,28 +163,41 @@
         function update() {
             document.getElementById('score').innerText = Math.floor(state.petals);
             document.getElementById('cps').innerText = state.cps.toFixed(1);
-
+            
             for (let id in tree) {
-                const nodeEl = document.getElementById("n-" + id);
-                const lineEl = document.getElementById("l-" + id);
+                const el = document.getElementById("n-" + id);
+                const line = document.getElementById("l-" + id);
+                const cloud = document.getElementById("c-" + id);
+                
                 const isOwned = state.owned.includes(id);
                 const isParentOwned = state.owned.includes(tree[id].parent);
 
                 if (isOwned) {
-                    nodeEl.className = "node owned";
-                    if (lineEl) lineEl.classList.add('active');
+                    el.className = "node owned";
+                    if (line) line.setAttribute("class", "active");
+                    if (cloud) cloud.classList.add("blow-away");
                 } else if (isParentOwned) {
-                    nodeEl.className = "node buyable";
-                    if (lineEl) lineEl.style.stroke = "#483d8b";
+                    el.className = "node available";
+                    if (cloud) cloud.classList.add("blow-away");
                 } else {
-                    nodeEl.className = "node hidden";
+                    el.className = "node locked";
+                    if (cloud) cloud.classList.remove("blow-away");
                 }
+            }
+        }
+
+        function toggleTree() {
+            const overlay = document.getElementById('tree-overlay');
+            overlay.style.display = overlay.style.display === 'block' ? 'none' : 'block';
+            if(overlay.style.display === 'block') {
+                const cont = document.getElementById('tree-container');
+                cont.scrollLeft = 3000 - cont.clientWidth/2;
+                cont.scrollTop = 3000 - cont.clientHeight/2;
             }
         }
 
         function clickPetal() { state.petals += 1 + (state.cps * 0.1); update(); }
         setInterval(() => { state.petals += state.cps/10; update(); }, 100);
-        
         buildTree();
     </script>
 </body>
